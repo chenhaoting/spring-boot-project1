@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link type="text/css" rel="stylesheet" href="static\assets\global\plugins\bootstrap\css\bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="static\assets\global\css\components.css">
+    <link type="text/css" rel="stylesheet" href="static\assets\admin\pages\css\login.css">
+    <script src="static\assets\global\plugins\jquery-1.11.0.min.js" type=text/javascript></script>
+</head>
+<body>
+    <div id="top">
+        <h3 class="form-title">返回列表</h3>
+    </div>
+    <div class="login">
+        <div class="left"></div>
+        <div class="content">
+
+            <div class="form-group">
+                <div>
+                    <label class="control-label" id="title"></label>
+                </div>
+            </div>
+            <div id="promoStartDateContainer" class="form-group">
+                <div>
+                    <label style="color:red" class="control-label" id="promoStartDate"></label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label">描述</label>
+                <div>
+                    
+                <label class="control-label" id="description"></label>
+                </div>
+            </div>
+            <div id="normalPriceContainer" class="form-group">
+                <label class="control-label">价格</label><label class="control-label" id="price"></label>元
+
+            </div>
+            <div id="promoPriceContainer" class="form-group">
+                <label style="color:red" class="control-label">秒杀价格</label>
+                    <label style="color:red" class="control-label" id="promoPrice"></label>元
+
+            </div>
+            <div class="form-group">
+                <div>
+                    <img style='width:100px;height:auto' id="imgUrl"></img>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label">库存</label>
+                <div>
+                    <label class="control-label" id="stock"></label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label">销量</label>
+                <div>
+                    <label class="control-label" id="sales"></label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn blue" id="createorder">
+                    下单
+                </button>
+            </div>
+
+        </div>
+    </div>
+    <div>
+        <h3 class="form-title"><a href="#top">返回顶部</a></h3>
+    </div>
+</body>
+<style>
+    .form-title{
+        text-align: center;
+    }
+    .left{
+        position: relative;
+        height: 100%;
+        width: 15%;
+    }
+</style>
+<script>
+    function getParam(paramName) {            
+        paramValue = "", isFound = !1;
+        if (this.location.search.indexOf("?") == 0 && this.location.search.indexOf("=") > 1) {
+            arrSource = unescape(this.location.search).substring(1, this.location.search.length).split("&"), i = 0;
+            while (i < arrSource.length && !isFound) 
+            arrSource[i].indexOf("=") > 0 && arrSource[i].split("=")[0].toLowerCase() == paramName.toLowerCase() && (paramValue = arrSource[i].split("=")[1],isFound = !0),
+            i++         
+        }           
+        return paramValue == "" && (paramValue = null), paramValue      
+    }
+    var g_itemVO={}
+    jQuery(document).ready(function(){
+        $("#top").on("click",function(){
+            window.location.href="listitem.html";
+        })
+        $("#createorder").on("click",function(){
+            $.ajax({
+                type:"POST",
+                contentType:"application/x-www-form-urlencoded",
+                url:"http://localhost:8090/order/createorder",
+                data:{
+                    
+                    "itemId":g_itemVO.id,
+                    "amount":1,
+                    "promoId":g_itemVO.promoId
+                },
+                //允许跨域
+                xhrFields:{withCredentials:true},
+                success:function(data){
+                    if(data.status=="success"){
+                        window.location.reload();
+                        g_itemVO=data.data;
+                        reloadDom();
+                    }else{
+                        alert("失败  "+data.data.errMsg)
+                        if(data.data.errCode==20003){
+                            window.location.href="login.html";
+                        }
+                    }
+                },
+                error:function(data){
+                    alert("失败   "+data.responseText)
+                }
+            })
+        })
+            $.ajax({
+                type:"GET",
+                url:"http://localhost:8090/item/get",
+                data:{
+                    "id":getParam("id")
+                    
+
+                },
+                //允许跨域
+                xhrFields:{withCredentials:true},
+                success:function(data){
+                    if(data.status=="success"){
+                        g_itemVO=data.data;
+                        reloadDom();
+                        setInterval(reloadDom,1000);
+                    }else{
+                        alert("失败  "+data.data.errMsg)
+                    }
+                },
+                error:function(data){
+                    alert("失败   "+data.responseText)
+                }
+            })
+    });
+
+    function reloadDom(){
+
+        $("#title").text(g_itemVO.title);
+        $("#description").text(g_itemVO.description);
+        $("#stock").text(g_itemVO.stock);
+        $("#price").text(g_itemVO.price);
+        $("#imgUrl").attr("src",g_itemVO.imgUrl);
+        $("#sales").text(g_itemVO.sales);
+        if(g_itemVO.promoStatus==1){
+            var startTime=g_itemVO.startDate.replace(new RegExp("-","gm"),"/")
+            startTime=(new Date(startTime)).getTime();
+            
+            var nowTime=Date.parse(new Date());
+            var delta=(startTime-nowTime)/1000;
+            if(delta<=0){
+                //秒杀开始
+                g_itemVO.promoStatus=2;
+                reloadDom();
+            }
+            //秒杀未开始
+            $("#promoStartDate").text("秒杀活动"+g_itemVO.startDate+"开始,倒计时"+delta+"秒")
+            $("#promoPrice").text(g_itemVO.promoPrice)
+            $("#createorder").attr("disabled",true)
+        }else if(g_itemVO.promoStatus==2){
+            //进行中
+            $("#promoStartDate").text("秒杀进行中")
+            $("#promoPrice").text(g_itemVO.promoPrice)
+        
+            $("#createorder").attr("disabled",false)
+            $("#normalPriceContainer").hide();
+        }else{
+            
+            $("#promoStartDate").text("没有秒杀活动");
+            $("#promoPriceContainer").hide();
+
+        }
+    }
+</script>
+</html>
